@@ -107,10 +107,16 @@
     <!-- Interactive Falling Petals Background Canvas -->
     <canvas id="bgCanvas"></canvas>
 
-    <div class="fixed top-5 right-5 z-50">
-        <button id="musicToggle" class="glass-card px-4 py-2.5 rounded-full flex items-center gap-2 text-pink-600 font-mali font-semibold shadow-md hover:scale-105 active:scale-95 transition-all text-xs md:text-sm">
+    <!-- Background Audio Component -->
+    <audio id="bgAudio" loop preload="auto">
+        <source src="unbreakable-love.mp3" type="audio/mpeg">
+        <source src="https://raw.githubusercontent.com/Sern-dev/flower-for-Someone-special/main/unbreakable-love.mp3" type="audio/mpeg">
+    </audio>
+
+    <div class="fixed top-5 right-5 z-40">
+        <button id="musicToggle" onclick="toggleMusic()" class="glass-card px-4 py-2.5 rounded-full flex items-center gap-2 text-pink-600 font-mali font-semibold shadow-md hover:scale-105 active:scale-95 transition-all text-xs md:text-sm">
             <i class="fas fa-music text-pink-500" id="musicIcon"></i>
-            <span id="musicText">เปิดดนตรีบรรยากาศ</span>
+            <span id="musicText">เปิดเพลงบรรยากาศ</span>
         </button>
     </div>
 
@@ -245,11 +251,13 @@
 
     </main>
 
-    <div id="cardModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm opacity-0 pointer-events-none transition-all duration-300">
-        <div class="glass-card max-w-md w-full p-6 md:p-8 rounded-3xl space-y-4 relative transform scale-95 transition-all duration-300 bg-gradient-to-br from-white via-pink-50/90 to-white shadow-2xl" id="modalCardContent">
+    <!-- FIXED MODAL DIALOG -->
+    <div id="cardModal" onclick="handleModalClick(event)" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm transition-all duration-300">
+        <div class="glass-card max-w-md w-full p-6 md:p-8 rounded-3xl space-y-4 relative bg-gradient-to-br from-white via-pink-50/90 to-white shadow-2xl border-2 border-pink-200" id="modalCardContent">
             
-            <button onclick="toggleCardModal(false)" class="absolute top-4 right-4 w-9 h-9 rounded-full bg-pink-100 text-pink-500 hover:bg-pink-200 flex items-center justify-center transition-colors">
-                <i class="fas fa-times"></i>
+            <!-- X Close Button -->
+            <button type="button" onclick="toggleCardModal(false)" class="absolute top-4 right-4 w-9 h-9 rounded-full bg-pink-100 text-pink-500 hover:bg-pink-200 flex items-center justify-center transition-colors cursor-pointer z-10">
+                <i class="fas fa-times text-lg"></i>
             </button>
 
             <div class="text-center space-y-2">
@@ -271,7 +279,8 @@
                 </p>
             </div>
 
-            <button onclick="toggleCardModal(false)" class="w-full py-2.5 rounded-xl bg-pink-100 text-pink-600 font-mali font-bold text-xs hover:bg-pink-200 transition-colors">
+            <!-- Bottom Close Button -->
+            <button type="button" onclick="toggleCardModal(false)" class="w-full py-2.5 rounded-xl bg-pink-500 text-white font-mali font-bold text-sm hover:bg-pink-600 transition-colors cursor-pointer shadow-md">
                 ปิดหน้าต่างนี้
             </button>
         </div>
@@ -356,96 +365,43 @@
         animateBackground();
 
 
-        // WEB AUDIO SYNTHESIZER (Music Box Atmosphere)
-        let audioCtx = null;
-        let isMusicPlaying = false;
-        let musicLoopTimer = null;
-
-        const melodyNotes = [
-            261.63, 329.63, 392.00, 523.25, 
-            440.00, 349.23, 329.63, 392.00, 
-            293.66, 349.23, 392.00, 440.00, 
-            523.25, 392.00, 329.63, 261.63  
-        ];
-        let noteIndex = 0;
-
-        function initAudio() {
-            if (!audioCtx) {
-                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-            }
-            if (audioCtx.state === 'suspended') {
-                audioCtx.resume();
-            }
-        }
-
-        function playTone(freq, duration = 1.2, gainValue = 0.05) {
-            if (!audioCtx) return;
-
-            const osc = audioCtx.createOscillator();
-            const gain = audioCtx.createGain();
-
-            osc.type = 'sine';
-            osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
-
-            gain.gain.setValueAtTime(gainValue, audioCtx.currentTime);
-            gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + duration);
-
-            osc.connect(gain);
-            gain.connect(audioCtx.destination);
-
-            osc.start();
-            osc.stop(audioCtx.currentTime + duration);
-        }
-
-        function playMusicBoxStep() {
-            if (!isMusicPlaying) return;
-            initAudio();
-
-            const note = melodyNotes[noteIndex];
-            playTone(note, 1.4, 0.06);
-
-            if (noteIndex % 4 === 0) {
-                playTone(note / 2, 2.0, 0.03);
-            }
-
-            noteIndex = (noteIndex + 1) % melodyNotes.length;
-            musicLoopTimer = setTimeout(playMusicBoxStep, 450);
-        }
-
-        const musicBtn = document.getElementById('musicToggle');
+        // AUDIO CONTROLLER LOGIC
+        const audio = document.getElementById('bgAudio');
         const musicIcon = document.getElementById('musicIcon');
         const musicText = document.getElementById('musicText');
+        let isPlaying = false;
 
         function toggleMusic(forceState = null) {
-            initAudio();
-            isMusicPlaying = forceState !== null ? forceState : !isMusicPlaying;
-
-            if (isMusicPlaying) {
-                musicText.innerText = 'ปิดเสียงดนตรี';
-                musicIcon.className = 'fas fa-volume-up text-pink-500 animate-pulse';
-                playMusicBoxStep();
+            if (forceState !== null) {
+                isPlaying = forceState;
             } else {
-                musicText.innerText = 'เปิดดนตรีบรรยากาศ';
+                isPlaying = !isPlaying;
+            }
+
+            if (isPlaying) {
+                audio.play().then(() => {
+                    musicText.innerText = 'ปิดเสียงเพลง';
+                    musicIcon.className = 'fas fa-volume-up text-pink-500 animate-pulse';
+                }).catch(e => {
+                    console.log("Autoplay prevented:", e);
+                    isPlaying = false;
+                });
+            } else {
+                audio.pause();
+                musicText.innerText = 'เปิดเพลงบรรยากาศ';
                 musicIcon.className = 'fas fa-music text-pink-500';
-                clearTimeout(musicLoopTimer);
             }
         }
-
-        musicBtn.addEventListener('click', () => toggleMusic());
 
 
         // GIFT BOX UNBOXING LOGIC
         function openGift() {
-            initAudio();
-            
             // Lid Open Animation
             const lid = document.getElementById('boxLid');
             lid.classList.add('lid-open');
 
-            // Play Chime Sound
-            [523.25, 659.25, 783.99, 1046.50].forEach((freq, idx) => {
-                setTimeout(() => playTone(freq, 1.2, 0.08), idx * 100);
-            });
+            // Play Music on User Interaction
+            toggleMusic(true);
 
             // Trigger Confetti & Particles
             setTimeout(() => {
@@ -463,10 +419,6 @@
                         scene2.classList.add('opacity-100', 'scale-100');
                     }, 50);
                 }, 500);
-
-                if (!isMusicPlaying) {
-                    toggleMusic(true);
-                }
 
             }, 400);
         }
@@ -520,8 +472,6 @@
 
         // INTERACTIVE BUTTON ACTIONS
         function addSparkles() {
-            initAudio();
-            [800, 1000, 1200, 1400].forEach((f, i) => setTimeout(() => playTone(f, 0.4, 0.05), i * 60));
             if (typeof confetti === 'function') {
                 confetti({
                     particleCount: 35,
@@ -533,8 +483,6 @@
         }
 
         function burstHearts() {
-            initAudio();
-            [523.25, 659.25, 783.99].forEach((f, i) => setTimeout(() => playTone(f, 0.5, 0.06), i * 90));
             if (typeof confetti === 'function') {
                 confetti({
                     particleCount: 40,
@@ -545,22 +493,21 @@
             }
         }
 
-        // MODAL CONTROLLER
+        // MODAL CONTROLLER FIXED
         function toggleCardModal(show) {
             const modal = document.getElementById('cardModal');
-            const content = document.getElementById('modalCardContent');
-
             if (show) {
-                modal.classList.remove('pointer-events-none', 'opacity-0');
-                modal.classList.add('opacity-100');
-                content.classList.remove('scale-95');
-                content.classList.add('scale-100');
-                initAudio();
-                playTone(659.25, 0.8, 0.05);
+                modal.classList.remove('hidden');
             } else {
-                modal.classList.add('opacity-0', 'pointer-events-none');
-                content.classList.remove('scale-100');
-                content.classList.add('scale-95');
+                modal.classList.add('hidden');
+            }
+        }
+
+        // Allow closing when clicking outside the card box
+        function handleModalClick(event) {
+            const modalContent = document.getElementById('modalCardContent');
+            if (!modalContent.contains(event.target)) {
+                toggleCardModal(false);
             }
         }
     </script>
